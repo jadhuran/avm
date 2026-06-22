@@ -374,13 +374,24 @@ static INLINE void update_mv_precision(const MV ref_mv,
 }
 // Prune the evaluation of current MV precision based on best MV precision
 // chosen so far.
-static INLINE bool prune_curr_mv_precision_eval(
-    int prune_mv_prec_using_best_mv_prec_so_far, int precision_dx,
-    int best_precision_dx) {
+static INLINE bool prune_curr_mv_precision_eval(AV2_COMP *const cpi,
+                                                const MB_MODE_INFO *mbmi,
+                                                int precision_dx,
+                                                int best_precision_dx) {
+  const int prune_mv_prec_using_best_mv_prec_so_far =
+      cpi->sf.flexmv_sf.prune_non_one_pel_mv_using_best_mv_prec ||
+      cpi->sf.flexmv_sf.prune_mv_prec_using_best_mv_prec_so_far;
+
   if (!prune_mv_prec_using_best_mv_prec_so_far) return false;
   if (prune_mv_prec_using_best_mv_prec_so_far >= 1) {
     // If the current MV precision index is farther from the best MV precision,
     // prune the evaluation of current MV precision.
+
+    // Avoid pruning one pel precision for boosted frames based
+    // on qindex when mbmi->max_mv_precision is QTR_PEL.
+    if (cpi->sf.flexmv_sf.prune_non_one_pel_mv_using_best_mv_prec &&
+        mbmi->max_mv_precision == MV_PRECISION_QTR_PEL && precision_dx == 2)
+      return false;
     if (best_precision_dx - precision_dx > 1) return true;
   }
   return false;

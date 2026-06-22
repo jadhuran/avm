@@ -1174,6 +1174,87 @@ static INLINE int reuse_comp_mv_for_opfl(const AV2_COMMON *const cm,
   return 0;
 }
 
+static int reuse_newmv_for_opfl(const AV2_COMP *const cpi,
+                                HandleInterModeArgs *const args,
+                                MB_MODE_INFO *const mbmi, int valid_mv0,
+                                int valid_mv1, int valid_joint_mv_base,
+                                int jmvd_base_ref_list, int same_side) {
+  if (!cpi->sf.inter_sf.reuse_single_newmv_for_opfl) return 0;
+  const AV2_COMMON *const cm = &cpi->common;
+  const PREDICTION_MODE this_mode = mbmi->mode;
+  const int first_ref_dist =
+      cm->ref_frame_relative_dist[mbmi->ref_frame[jmvd_base_ref_list]];
+  int sec_ref_dist =
+      cm->ref_frame_relative_dist[mbmi->ref_frame[1 - jmvd_base_ref_list]];
+  sec_ref_dist = same_side ? sec_ref_dist : -sec_ref_dist;
+
+  if (this_mode == NEW_NEWMV_OPTFLOW && mbmi->use_amvd == 0 &&
+      args->new_newmv_stats_idx == 0 && valid_mv0 && valid_mv1) {
+    return 1;
+  } else if (this_mode == NEW_NEARMV_OPTFLOW && mbmi->use_amvd == 0 &&
+             args->new_nearmv_stats_idx == 0 && valid_mv0) {
+    return 1;
+  } else if (this_mode == NEAR_NEWMV_OPTFLOW && mbmi->use_amvd == 0 &&
+             args->near_newmv_stats_idx == 0 && valid_mv1) {
+    return 1;
+  } else if (this_mode == JOINT_NEWMV_OPTFLOW &&
+             args->joint_newmv_stats_idx == 0 && mbmi->use_amvd == 0 &&
+             valid_joint_mv_base &&
+             (abs(first_ref_dist) == abs(sec_ref_dist))) {
+    return 1;
+  }
+  return 0;
+}
+
+static int reuse_joint_newmv_from_newmv(
+    const AV2_COMMON *const cm, MACROBLOCK *const x, MB_MODE_INFO *const mbmi,
+    int jmvd_base_ref_list, int_mv *cur_mv, int *rate_mv,
+    const MvSubpelPrecision pb_mv_precision, int same_side) {
+  assert(mbmi->use_amvd == 0);
+  const int first_ref_dist =
+      cm->ref_frame_relative_dist[mbmi->ref_frame[jmvd_base_ref_list]];
+  int sec_ref_dist =
+      cm->ref_frame_relative_dist[mbmi->ref_frame[1 - jmvd_base_ref_list]];
+  sec_ref_dist = same_side ? sec_ref_dist : -sec_ref_dist;
+  SubpelMvLimits subpel_limits;
+  MV other_mvd = { 0, 0 };
+  MV diff = { 0, 0 };
+  const int_mv ref_mv = av2_get_ref_mv(x, jmvd_base_ref_list);
+  av2_set_subpel_mv_search_range(&subpel_limits, &x->mv_limits, &ref_mv.as_mv,
+                                 pb_mv_precision);
+  if (!av2_is_subpelmv_in_range(&subpel_limits,
+                                cur_mv[jmvd_base_ref_list].as_mv))
+    return 0;
+  MV low_prec_refmv = ref_mv.as_mv;
+  if (pb_mv_precision < MV_PRECISION_HALF_PEL)
+    lower_mv_precision(&low_prec_refmv, pb_mv_precision);
+  update_mv_precision(ref_mv.as_mv, pb_mv_precision,
+                      &cur_mv[jmvd_base_ref_list].as_mv);
+
+  diff.row = cur_mv[jmvd_base_ref_list].as_mv.row - low_prec_refmv.row;
+  diff.col = cur_mv[jmvd_base_ref_list].as_mv.col - low_prec_refmv.col;
+  get_mv_projection(&other_mvd, diff, sec_ref_dist, first_ref_dist);
+  scale_other_mvd(&other_mvd, mbmi->jmvd_scale_mode, mbmi->mode,
+                  mbmi->use_amvd);
+
+  int_mv ref_mv_other = av2_get_ref_mv(x, 1 - jmvd_base_ref_list);
+
+  av2_set_subpel_mv_search_range(&subpel_limits, &x->mv_limits,
+                                 &ref_mv_other.as_mv, pb_mv_precision);
+  low_prec_refmv = ref_mv_other.as_mv;
+
+  int_mv other_mv;
+  other_mv.as_mv.row = (int)(low_prec_refmv.row + other_mvd.row);
+  other_mv.as_mv.col = (int)(low_prec_refmv.col + other_mvd.col);
+  if (!av2_is_subpelmv_in_range(&subpel_limits, other_mv.as_mv)) return 0;
+
+  cur_mv[1 - jmvd_base_ref_list].as_int = other_mv.as_int;
+  *rate_mv = 0;
+  *rate_mv = av2_mv_bit_cost(&cur_mv[jmvd_base_ref_list].as_mv, &ref_mv.as_mv,
+                             pb_mv_precision, &x->mv_costs, MV_COST_WEIGHT, 0);
+  return 1;
+}
+
 static int64_t handle_newmv(const AV2_COMP *const cpi, MACROBLOCK *const x,
                             const BLOCK_SIZE bsize, int_mv *cur_mv,
                             int *const rate_mv, HandleInterModeArgs *const args,
@@ -1214,6 +1295,8 @@ static int64_t handle_newmv(const AV2_COMP *const cpi, MACROBLOCK *const x,
     }
     const int valid_mv0 = valid_mv0_found;
     const int valid_mv1 = valid_mv1_found;
+    const int reuse_newmv_for_opfl_mv_search =
+        reuse_newmv_for_opfl(cpi, args, mbmi, valid_mv0, valid_mv1, 0, 0, 0);
 
     if (this_mode == NEW_NEWMV || this_mode == NEW_NEWMV_OPTFLOW) {
       if (reuse_comp_mv_for_opfl(cm, x, args, cur_mv, rate_mv)) {
@@ -1239,9 +1322,10 @@ static int64_t handle_newmv(const AV2_COMP *const cpi, MACROBLOCK *const x,
         }
 
         // avmenc1
-        if (mbmi->use_amvd ||
-            cpi->sf.inter_sf.comp_inter_joint_search_thresh <= bsize ||
-            !valid_mv0 || !valid_mv1) {
+        if (!reuse_newmv_for_opfl_mv_search &&
+            (mbmi->use_amvd ||
+             cpi->sf.inter_sf.comp_inter_joint_search_thresh <= bsize ||
+             !valid_mv0 || !valid_mv1)) {
           // uint8_t mask_value = 32;
           if (mbmi->use_amvd)
             av2_amvd_joint_motion_search(cpi, x, bsize, cur_mv, NULL, 0,
@@ -1272,7 +1356,8 @@ static int64_t handle_newmv(const AV2_COMP *const cpi, MACROBLOCK *const x,
 
         clamp_mv_in_range(x, &cur_mv[1], 1, pb_mv_precision);
       }
-      if (cm->seq_params.enable_adaptive_mvd) {
+      if (!reuse_newmv_for_opfl_mv_search &&
+          cm->seq_params.enable_adaptive_mvd) {
         if (reuse_comp_mv_for_opfl(cm, x, args, cur_mv, rate_mv)) {
           return 0;
         }
@@ -1286,8 +1371,9 @@ static int64_t handle_newmv(const AV2_COMP *const cpi, MACROBLOCK *const x,
         save_comp_mv_search_stat(x, args, cur_mv, start_mv);
       } else {
         // avmenc2
-        if (cpi->sf.inter_sf.comp_inter_joint_search_thresh <= bsize ||
-            !valid_mv1) {
+        if (!reuse_newmv_for_opfl_mv_search &&
+            (cpi->sf.inter_sf.comp_inter_joint_search_thresh <= bsize ||
+             !valid_mv1)) {
           av2_compound_single_motion_search_interinter(cpi, x, bsize, cur_mv,
                                                        NULL, 0, rate_mv, 1);
         } else {
@@ -1318,6 +1404,7 @@ static int64_t handle_newmv(const AV2_COMP *const cpi, MACROBLOCK *const x,
       const int jmvd_base_ref_list = get_joint_mvd_base_ref_list(cm, mbmi);
       const int valid_mv_base = (!jmvd_base_ref_list && valid_mv0) ||
                                 (jmvd_base_ref_list && valid_mv1);
+
       if (valid_mv_base &&
           !is_joint_amvd_coding_mode(mbmi->mode, mbmi->use_amvd)) {
         cur_mv[jmvd_base_ref_list].as_int =
@@ -1332,11 +1419,28 @@ static int64_t handle_newmv(const AV2_COMP *const cpi, MACROBLOCK *const x,
         clamp_mv_in_range(x, &cur_mv[jmvd_base_ref_list], jmvd_base_ref_list,
                           pb_mv_precision);
       }
-      av2_compound_single_motion_search_interinter(
-          cpi, x, bsize, cur_mv, NULL, 0, rate_mv, jmvd_base_ref_list);
-      if (cur_mv->as_int == INVALID_MV) return INT64_MAX;
-      int_mv start_mv = { 0 };
-      save_comp_mv_search_stat(x, args, cur_mv, start_mv);
+
+      const int reuse_newmv_for_joint_mv_search =
+          reuse_newmv_for_opfl(cpi, args, mbmi, valid_mv0, valid_mv1,
+                               valid_mv_base, jmvd_base_ref_list, same_side);
+
+      if (!reuse_newmv_for_joint_mv_search) {
+        av2_compound_single_motion_search_interinter(
+            cpi, x, bsize, cur_mv, NULL, 0, rate_mv, jmvd_base_ref_list);
+        if (cur_mv->as_int == INVALID_MV) return INT64_MAX;
+        int_mv start_mv = { 0 };
+        save_comp_mv_search_stat(x, args, cur_mv, start_mv);
+      } else {
+        if (!reuse_joint_newmv_from_newmv(cm, x, mbmi, jmvd_base_ref_list,
+                                          cur_mv, rate_mv, pb_mv_precision,
+                                          same_side)) {
+          av2_compound_single_motion_search_interinter(
+              cpi, x, bsize, cur_mv, NULL, 0, rate_mv, jmvd_base_ref_list);
+          if (cur_mv->as_int == INVALID_MV) return INT64_MAX;
+          int_mv start_mv = { 0 };
+          save_comp_mv_search_stat(x, args, cur_mv, start_mv);
+        }
+      }
     } else {
       assert(this_mode == NEW_NEARMV || this_mode == NEW_NEARMV_OPTFLOW);
       if (reuse_comp_mv_for_opfl(cm, x, args, cur_mv, rate_mv)) {
@@ -1350,7 +1454,8 @@ static int64_t handle_newmv(const AV2_COMP *const cpi, MACROBLOCK *const x,
         lower_mv_precision(&cur_mv[0].as_mv, pb_mv_precision);
         clamp_mv_in_range(x, &cur_mv[0], 0, pb_mv_precision);
       }
-      if (cm->seq_params.enable_adaptive_mvd) {
+      if (!reuse_newmv_for_opfl_mv_search &&
+          cm->seq_params.enable_adaptive_mvd) {
         av2_compound_single_motion_search_interinter(cpi, x, bsize, cur_mv,
                                                      NULL, 0, rate_mv, 0);
         if (cur_mv->as_int == INVALID_MV) return INT64_MAX;
@@ -1358,8 +1463,9 @@ static int64_t handle_newmv(const AV2_COMP *const cpi, MACROBLOCK *const x,
         save_comp_mv_search_stat(x, args, cur_mv, start_mv);
       } else {
         // avmenc3
-        if (cpi->sf.inter_sf.comp_inter_joint_search_thresh <= bsize ||
-            !valid_mv0) {
+        if (!reuse_newmv_for_opfl_mv_search &&
+            (cpi->sf.inter_sf.comp_inter_joint_search_thresh <= bsize ||
+             !valid_mv0)) {
           av2_compound_single_motion_search_interinter(cpi, x, bsize, cur_mv,
                                                        NULL, 0, rate_mv, 0);
         } else {
@@ -5473,9 +5579,8 @@ static int64_t handle_inter_mode(
                   pb_mv_precision < MV_PRECISION_FOUR_PEL &&
                   best_precision_so_far >= MV_PRECISION_QTR_PEL)
                 continue;
-              if (prune_curr_mv_precision_eval(
-                      cpi->sf.flexmv_sf.prune_mv_prec_using_best_mv_prec_so_far,
-                      precision_dx, best_precision_dx_so_far))
+              if (prune_curr_mv_precision_eval(cpi, mbmi, precision_dx,
+                                               best_precision_dx_so_far))
                 continue;
               if (mbmi->ref_mv_idx[0] || mbmi->ref_mv_idx[1]) {
                 if (cpi->sf.flexmv_sf.do_not_search_8_pel_precision &&

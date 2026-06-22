@@ -334,6 +334,7 @@ static void set_good_speed_features_framesize_independent(
 
   sf->rd_sf.perform_coeff_opt = 1;
   if (speed >= 1) {
+    sf->flexmv_sf.prune_non_one_pel_mv_using_best_mv_prec = 1;
     sf->inter_sf.selective_ref_frame = 2;
     sf->inter_sf.prune_newmv_modes_using_prior_rd = 1;
     sf->inter_sf.share_motion_mode_prune_pool = 1;
@@ -389,6 +390,7 @@ static void set_good_speed_features_framesize_independent(
     // block, prunes when inter-mode ratio exceeds 50%, and early skips when
     // the current best partitioning is PARTITION_NONE).
     sf->part_sf.inter_sdp_fast_method_level = 1;
+    sf->inter_sf.reuse_single_newmv_for_opfl = 1;
   }
 
   if (speed >= 2) {
@@ -688,6 +690,7 @@ static AVM_INLINE void init_part_sf(PARTITION_SPEED_FEATURES *part_sf) {
   part_sf->prune_rect_with_ml = 0;
   part_sf->end_part_search_after_consec_failures = 0;
   part_sf->ext_recur_depth_level = 0;
+  part_sf->uneven_4way_recur_depth_level = 0;
   part_sf->prune_rect_with_split_depth = 0;
   part_sf->prune_part_h_with_partition_boundary = 0;
   part_sf->inter_sdp_fast_method_level = 0;
@@ -734,12 +737,14 @@ static AVM_INLINE void init_flexmv_sf(
   flexmv_sf->fast_mv_refinement = 0;
   flexmv_sf->fast_motion_search_low_precision = 0;
   flexmv_sf->prune_mv_prec_using_best_mv_prec_so_far = 0;
+  flexmv_sf->prune_non_one_pel_mv_using_best_mv_prec = 0;
 }
 
 static AVM_INLINE void init_inter_sf(INTER_MODE_SPEED_FEATURES *inter_sf) {
   inter_sf->enable_six_param_warp_in_winner_mode = 0;
   inter_sf->enable_six_param_warp_in_winner_mode_by_tid = 0;
   inter_sf->comp_inter_joint_search_thresh = BLOCK_4X4;
+  inter_sf->reuse_single_newmv_for_opfl = 0;
   inter_sf->adaptive_rd_thresh = 0;
   inter_sf->model_based_post_interp_filter_breakout = 0;
   inter_sf->skip_temporary_pred_for_opfl = 0;
@@ -1255,6 +1260,10 @@ static AVM_INLINE void set_erp_speed_features_qindex_dependent(AV2_COMP *cpi) {
     if (!boosted && cm->quant_params.base_qindex < qindex_thresh3) {
       sf->part_sf.simple_motion_search_split = 1;
     }
+    sf->part_sf.uneven_4way_recur_depth_level = 1;
+    if (frame_is_intra_only(cm) &&
+        cm->quant_params.base_qindex >= qindex_thresh3)
+      sf->part_sf.uneven_4way_recur_depth_level = 0;
   }
 }
 
@@ -1328,6 +1337,9 @@ void av2_set_speed_features_qindex_dependent(AV2_COMP *cpi, int speed) {
     if (cm->quant_params.base_qindex <= qindex_thresh &&
         !cm->features.allow_screen_content_tools) {
       sf->flexmv_sf.prune_mv_prec_using_best_mv_prec_so_far = boosted ? 0 : 1;
+      if (!boosted) {
+        sf->flexmv_sf.prune_non_one_pel_mv_using_best_mv_prec = 0;
+      }
       sf->tx_sf.prune_inter_tx_part_rd_eval = true;
     }
   }

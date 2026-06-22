@@ -406,6 +406,8 @@ typedef struct PARTITION_SPEED_FEATURES {
   // If set to 1, recursion depth is set 2 if block area > 1024 else it is set
   // to INT_MAX. If set to 2, recursion depth is set to 1.
   int ext_recur_depth_level;
+  // reduce the recursion depth for uneven 4-way partitions based on block size
+  int uneven_4way_recur_depth_level;
 
   // Prune rect partitions if PARTITION_SPLIT goes deep.
   int prune_rect_with_split_depth;
@@ -630,6 +632,9 @@ typedef struct INTER_MODE_SPEED_FEATURES {
   // error of combined predictor then check around mv for alt). If 0 we
   // we just use the best motion vector found for each frame by itself.
   BLOCK_SIZE comp_inter_joint_search_thresh;
+
+  // Reuse mv from NEWMV for opfl modes that require motion vectors
+  int reuse_single_newmv_for_opfl;
 
   // Instead of performing a full MV search, do a simple translation first
   // and only perform a full MV search on the motion vectors that performed
@@ -977,6 +982,9 @@ typedef struct FLEXMV_PRECISION_SPEED_FEATURES {
   // Prune the evaluation of current MV precision based on best MV precision
   // chosen so far.
   int prune_mv_prec_using_best_mv_prec_so_far;
+  // Enable prune mv precision using best mv precision but restrict pruning one
+  // pel
+  int prune_non_one_pel_mv_using_best_mv_prec;
 } FLEXMV_PRECISION_SPEED_FEATURES;
 
 /*!\endcond */

@@ -1,3 +1,10 @@
+% IEEE style: more than six authors -> first author followed by "et al."
+@IEEEtranBSTCTL{IEEEexample:BSTcontrol,
+  CTLuse_forced_etal       = "yes",
+  CTLmax_names_forced_etal = "6",
+  CTLnames_show_etal       = "1"
+}
+
 @article{VP9,
   title={A technical overview of vp9—the latest open-source video codec},
   author={Mukherjee, Debargha and Han, Jingning and Bankoski, Jim and Bultje, Ronald and Grange, Adrian and Koleszar, John and Wilkins, Paul and Xu, Yaowu},
@@ -485,39 +492,49 @@ URL = {https://doi.org/10.1117/12.2681766}
   publisher={IEEE}
 }
 
-@inproceedings{tip,
-  title={Temporal Interpolated Prediction Mode},
-  author={Wu, Yeqing and Zheng, Yunfei and Tourapis, Alexis amd Nalci, Alican and Du, Yixin and Egilmez, Hilmi and Keinath, Albert and Xin, Jun and Wu, Hsi-Jung},
-  booktitle={Alliance for Open Media},
-  organization={Document: CWG-C007}
+@techreport{tip,
+  author      = {Wu, Yeqing and Zheng, Yunfei and Tourapis, Alexis and Nalci, Alican and Du, Yixin and Egilmez, Hilmi E. and Keinath, Albert and Xin, Jun and Wu, Hsi-Jung},
+  title       = {Temporal Interpolated Prediction Mode},
+  institution = {Alliance for Open Media, Codec Working Group},
+  type        = {Input Document},
+  number      = {CWG-C007},
+  year        = {2022}
 }
 
-@inproceedings{tip_ld,
-  title={Support TIP in Low Delay},
-  author={Wu, Yeqing and Zheng, Yunfei and Gao, Han and Du, Yixin and Egilmez, Hilmi  and Jin, Guoxin and Tourapis, Alexis},
-  booktitle={Alliance for Open Media},
-  organization={Document: CWG-E228}
+@techreport{tip_ld,
+  author      = {Wu, Yeqing and Zheng, Yunfei and Gao, Han and Du, Yixin and Egilmez, Hilmi E. and Jin, Guoxin and Tourapis, Alexis},
+  title       = {Support {TIP} in Low Delay},
+  institution = {Alliance for Open Media, Codec Working Group},
+  type        = {Input Document},
+  number      = {CWG-E228},
+  year        = {2024}
 }
 
-@inproceedings{tip_opfl,
-  title={Optical Flow Refinement with TIP},
-  author={Li, Bohan and Lu, Lester and Han, Jingning and Mukherjee, Debargha and Xu, Yaowu and Wu, Yeqing and Zheng, Yunfei and Tourapis, Alexis},
-  booktitle={Alliance for Open Media},
-  organization={Document: CWG-C035}
+@techreport{tip_opfl,
+  author      = {Li, Bohan and Lu, Keng-Shih and Han, Jingning and Mukherjee, Debargha and Xu, Yaowu and Wu, Yeqing and Zheng, Yunfei and Tourapis, Alexis},
+  title       = {Optical Flow Refinement with {TIP}},
+  institution = {Alliance for Open Media, Codec Working Group},
+  type        = {Input Document},
+  number      = {CWG-C035},
+  year        = {2022}
 }
 
-@inproceedings{tip_weights,
-  title={TIP Enhancement},
-  author={Wu, Yeqing and Zheng, Yunfei and Gao, Han and Du, Yixin and Egilmez, Hilmi  and Jin, Guoxin and Tourapis, Alexis},
-  booktitle={Alliance for Open Media},
-  organization={Document: CWG-E254}
+@techreport{tip_weights,
+  author      = {Wu, Yeqing and Zheng, Yunfei and Gao, Han and Du, Yixin and Egilmez, Hilmi E. and Jin, Guoxin and Kuusela, Aki and Tourapis, Alexis},
+  title       = {{TIP} Enhancement},
+  institution = {Alliance for Open Media, Codec Working Group},
+  type        = {Input Document},
+  number      = {CWG-E254},
+  year        = {2024}
 }
 
-@inproceedings{MV-range-extension,
-  title={Extension of the Motion Vector Range},
-  author={Wu, Yeqing and Tourapis, Alexis and Zheng, Yunfei and Du, Yixin and Gao, Han and Jin, Guoxin and Zhao, Xin and Wang, Yunqing and Grange, Adrian and Norkin, Andrey},
-  booktitle={Alliance for Open Media},
-  organization={Document: CWG-F142}
+@techreport{MV-range-extension,
+  author      = {Wu, Yeqing and Tourapis, Alexis and Zheng, Yunfei and Du, Yixin and Gao, Han and Jin, Guoxin and Zhao, Xin and Wang, Yunqing and Grange, Adrian and Norkin, Andrey},
+  title       = {Extension of the Motion Vector Range},
+  institution = {Alliance for Open Media, Codec Working Group},
+  type        = {Input Document},
+  number      = {CWG-F142},
+  year        = {2025}
 }
 
 @inproceedings{alshin2010bi-directional,
@@ -584,11 +601,13 @@ URL = {https://doi.org/10.1117/12.3063639}
 % ---------------------------------------------------------------------------
 % Entries added for the TCSVT version
 % ---------------------------------------------------------------------------
-@inproceedings{bru,
-  title={{BRU}: Backward Reference Updating for Video Coding},
-  author={Jin, Guoxin and Wu, Yeqing and Hoang, Dzung and Zheng, Yunfei and Zhang, Dazhong and Kuusela, Aki and Fernandes, Felix and Chon, Jaehong and Morogan, Liviu and Tourapis, Alexis and Du, Yixin and Egilmez, Hilmi and Xin, Jun and Wu, Hsi-Jung and Pham, Van Luong and Chong, In Suk},
-  booktitle={Alliance for Open Media},
-  organization={Document: CWG-F127}
+@techreport{bru,
+  author      = {Jin, Guoxin and Wu, Yeqing and Hoang, Dzung and Zheng, Yunfei and Zhang, Dazhong and Kuusela, Aki and Fernandes, Felix and Chon, Jaehong and Morogan, Liviu and Tourapis, Alexis and Du, Yixin and Egilmez, Hilmi E. and Xin, Jun and Wu, Hsi-Jung and Pham, Van Luong and Chong, In Suk},
+  title       = {{BRU}: Backward Reference Updating for Video Coding},
+  institution = {Alliance for Open Media, Codec Working Group},
+  type        = {Input Document},
+  number      = {CWG-E127},
+  year        = {2024}
 }
 @inproceedings{warp_beyond_av1,
   author={Sarwer, Mohammed Golam and Barker, Rachel and Chen, Jianle and Mukherjee, Debargha},
@@ -636,4 +655,265 @@ URL = {https://doi.org/10.1117/12.3063639}
   title = {An Overview of Inter Coding Tools in {AV2}},
   booktitle = {2026 IEEE International Conference on Image Processing (ICIP)},
   year = {2026}
+}
+
+% ---------------------------------------------------------------------------
+% AOMedia CWG input documents (Candidate state) that first introduced each
+% tool. Authors and titles follow the document headers.
+% ---------------------------------------------------------------------------
+@techreport{cwgB023,
+  author      = {Mukherjee, Debargha and Su, Hui and Karpilovsky, Elliott},
+  title       = {Reference Motion Vector Candidate Bank},
+  institution = {Alliance for Open Media, Codec Working Group},
+  type        = {Input Document},
+  number      = {CWG-B023},
+  year        = {2021}
+}
+@techreport{cwgB041,
+  author      = {Lu, Keng-Shih and Parker, Sarah and Mukherjee, Debargha},
+  title       = {Optical Flow Motion Vector Refinement for {AV2}},
+  institution = {Alliance for Open Media, Codec Working Group},
+  type        = {Input Document},
+  number      = {CWG-B041},
+  year        = {2021}
+}
+@techreport{cwgB049,
+  author      = {Wu, Yeqing and Zheng, Yunfei and Tourapis, Alexis and Nalci, Alican and Guo, Mei and Keinath, Albert and Xin, Jun and Wu, Hsi-Jung},
+  title       = {Enhanced Techniques for Motion Vector Prediction ({MVP})},
+  institution = {Alliance for Open Media, Codec Working Group},
+  type        = {Input Document},
+  number      = {CWG-B049},
+  year        = {2021}
+}
+@techreport{cwgB091,
+  author      = {Lu, Keng-Shih and Parker, Sarah and Mukherjee, Debargha},
+  title       = {New Reference Signaling ({NRS})},
+  institution = {Alliance for Open Media, Codec Working Group},
+  type        = {Input Document},
+  number      = {CWG-B091},
+  year        = {2021}
+}
+@techreport{cwgB092,
+  author      = {Zhao, Liang and Zhao, Xin and Liu, Shan},
+  title       = {Advanced Motion Vector Difference Coding},
+  institution = {Alliance for Open Media, Codec Working Group},
+  type        = {Input Document},
+  number      = {CWG-B092},
+  year        = {2021}
+}
+@techreport{cwgC020,
+  author      = {Sarwer, Mohammed Golam and Zhao, Liang},
+  title       = {Focus Group Tests on Adaptive Motion Vector Resolution ({AMVR})},
+  institution = {Alliance for Open Media, Codec Working Group},
+  type        = {Input Document},
+  number      = {CWG-C020},
+  year        = {2022}
+}
+@techreport{cwgC042,
+  author      = {Choi, Byeongdoo and Misra, Kiran and Segall, Andrew},
+  title       = {On the Compound Mode and Reference Picture Signaling in the {AVM}},
+  institution = {Alliance for Open Media, Codec Working Group},
+  type        = {Input Document},
+  number      = {CWG-C042},
+  year        = {2022}
+}
+@techreport{cwgC043,
+  author      = {Gao, Han and Zhao, Xin and Zhao, Liang and Liu, Shan},
+  title       = {Motion Vector Predictor List Improvements},
+  institution = {Alliance for Open Media, Codec Working Group},
+  type        = {Input Document},
+  number      = {CWG-C043},
+  year        = {2022}
+}
+@techreport{cwgC050,
+  author      = {Barker, Rachel and Sarwer, Mohammed Golam and Chen, Jianle and Mukherjee, Debargha},
+  title       = {Extended Warped Prediction ({EWP})},
+  institution = {Alliance for Open Media, Codec Working Group},
+  type        = {Input Document},
+  number      = {CWG-C050},
+  year        = {2022}
+}
+@techreport{cwgC061,
+  author      = {Sarwer, Mohammed Golam and Barker, Rachel and Chen, Jianle and Mukherjee, Debargha},
+  title       = {Warp Reference List ({WRL}) for Warped Motion of {AVM}},
+  institution = {Alliance for Open Media, Codec Working Group},
+  type        = {Input Document},
+  number      = {CWG-C061},
+  year        = {2022}
+}
+@techreport{cwgC069,
+  author      = {Chen, Jianle and Mukherjee, Debargha and Sarwer, Mohammed Golam and Barker, Rachel},
+  title       = {Block Adaptive Local Weighted Prediction},
+  institution = {Alliance for Open Media, Codec Working Group},
+  type        = {Input Document},
+  number      = {CWG-C069},
+  year        = {2022}
+}
+@techreport{cwgC087,
+  author      = {Gao, Han and Zhao, Xin and Zhao, Liang and Liu, Shan and Sarwer, Mohammed Golam and Barker, Rachel and Chen, Jianle and Mukherjee, Debargha},
+  title       = {On Local Warp Parsing Dependency},
+  institution = {Alliance for Open Media, Codec Working Group},
+  type        = {Input Document},
+  number      = {CWG-C087},
+  year        = {2022}
+}
+@techreport{cwgC089,
+  author      = {Sarwer, Mohammed Golam and Barker, Rachel and Chen, Jianle and Mukherjee, Debargha and Gao, Han and Zhao, Xin and Zhao, Liang and Liu, Shan},
+  title       = {On Warp Motion of {AVM}},
+  institution = {Alliance for Open Media, Codec Working Group},
+  type        = {Input Document},
+  number      = {CWG-C089},
+  year        = {2022}
+}
+@techreport{cwgC092,
+  author      = {Gao, Han and Zhao, Xin and Zhao, Liang and Liu, Shan},
+  title       = {Wedge Mode Extensions},
+  institution = {Alliance for Open Media, Codec Working Group},
+  type        = {Input Document},
+  number      = {CWG-C092},
+  year        = {2022}
+}
+@techreport{cwgD027,
+  author      = {Zhao, Liang and Wang, Yingbin and Zhao, Xin and Xu, Xiaozhong and Gao, Han and Ye, Jing and Liu, Shan},
+  title       = {Adaptive Weighting for Compound Inter Modes},
+  institution = {Alliance for Open Media, Codec Working Group},
+  type        = {Input Document},
+  number      = {CWG-D027},
+  year        = {2023}
+}
+@techreport{cwgD031,
+  author      = {Sarwer, Mohammed Golam and Chen, Jianle and Lu, Keng-Shih and Mukherjee, Debargha and Chong, In Suk and Du, Yixin and Zheng, Yunfei},
+  title       = {Sub-Block Based {MV} Refinement},
+  institution = {Alliance for Open Media, Codec Working Group},
+  type        = {Input Document},
+  number      = {CWG-D031},
+  year        = {2023}
+}
+@techreport{cwgD048,
+  author      = {Zhao, Liang and Zhao, Xin and Ye, Jing and Gao, Han and Liu, Shan},
+  title       = {Explicit Signaling for Block Adaptive Weighted Prediction},
+  institution = {Alliance for Open Media, Codec Working Group},
+  type        = {Input Document},
+  number      = {CWG-D048},
+  year        = {2023}
+}
+@techreport{cwgD063,
+  author      = {Han, Jingning and Li, Bohan and Zheng, Lin and Wang, Yunqing and Wu, Yeqing and Zheng, Yunfei and Xu, Yaowu},
+  title       = {Frame Level Motion Vector for {TIP} Direct Mode},
+  institution = {Alliance for Open Media, Codec Working Group},
+  type        = {Input Document},
+  number      = {CWG-D063},
+  year        = {2023}
+}
+@techreport{cwgD067,
+  author      = {Sarwer, Mohammed Golam and Barker, Rachel and Mukherjee, Debargha and Chen, Jianle},
+  title       = {Improved Warp Motion of {AVM}},
+  institution = {Alliance for Open Media, Codec Working Group},
+  type        = {Input Document},
+  number      = {CWG-D067},
+  year        = {2023}
+}
+@techreport{cwgD071,
+  author      = {Gao, Han and Sarwer, Mohammed Golam and Chen, Jianle and Liu, Shan and Mukherjee, Debargha and Ye, Jing and Zhao, Liang and Zhao, Xin},
+  title       = {Joint Proposal of {CWG-D057} and {CWG-D062}},
+  institution = {Alliance for Open Media, Codec Working Group},
+  type        = {Input Document},
+  number      = {CWG-D071},
+  year        = {2023}
+}
+@techreport{cwgD165,
+  author      = {Barker, Rachel and Mukherjee, Debargha},
+  title       = {Disable {OBMC}},
+  institution = {Alliance for Open Media, Codec Working Group},
+  type        = {Input Document},
+  number      = {CWG-D165},
+  year        = {2023}
+}
+@techreport{cwgD166,
+  author      = {Chen, Jianle and Sarwer, Mohammed Golam and Barker, Rachel and Lu, Keng-Shih and Mukherjee, Debargha and Chong, In Suk},
+  title       = {Compound Warp Prediction for {AVM}},
+  institution = {Alliance for Open Media, Codec Working Group},
+  type        = {Input Document},
+  number      = {CWG-D166},
+  year        = {2023}
+}
+@techreport{cwgE014,
+  author      = {Sarwer, Mohammed Golam and Mukherjee, Debargha and Chen, Jianle and Vitvitskyy, Stan and Chong, In Suk},
+  title       = {Motion Vector Coding of {AVM}},
+  institution = {Alliance for Open Media, Codec Working Group},
+  type        = {Input Document},
+  number      = {CWG-E014},
+  year        = {2024}
+}
+@techreport{cwgE021,
+  author      = {Wu, Yeqing and Zheng, Yunfei and Kuusela, Aki and Du, Yixin and Egilmez, Hilmi E. and Jin, Guoxin and Fernandes, Felix and Chon, Jaehong and Tourapis, Alexis},
+  title       = {Simplification of Motion Vector Prediction List Construction},
+  institution = {Alliance for Open Media, Codec Working Group},
+  type        = {Input Document},
+  number      = {CWG-E021},
+  year        = {2024}
+}
+@techreport{cwgE115,
+  author      = {Li, Bohan and Han, Jingning and Chong, In Suk and Mukherjee, Debargha and Xu, Yaowu},
+  title       = {Simplified Motion Trajectory Tracking},
+  institution = {Alliance for Open Media, Codec Working Group},
+  type        = {Input Document},
+  number      = {CWG-E115},
+  year        = {2024}
+}
+@techreport{cwgE119,
+  author      = {Wu, Yeqing and Zheng, Yunfei and Du, Yixin and Egilmez, Hilmi E. and Jin, Guoxin and Tourapis, Alexis and Chon, Jaehong and Fernandes, Felix and Kuusela, Aki},
+  title       = {Memory Reduction for {RefMV} Bank},
+  institution = {Alliance for Open Media, Codec Working Group},
+  type        = {Input Document},
+  number      = {CWG-E119},
+  year        = {2024}
+}
+@techreport{cwgE236,
+  author      = {Wang, Yunqing and Han, Jingning and Mukherjee, Debargha},
+  title       = {Extensive Warp Prediction Filters},
+  institution = {Alliance for Open Media, Codec Working Group},
+  type        = {Input Document},
+  number      = {CWG-E236},
+  year        = {2024}
+}
+@techreport{cwgF017,
+  author      = {Wu, Yeqing and Zheng, Yunfei and Gao, Han and Du, Yixin and Egilmez, Hilmi E. and Jin, Guoxin and Li, Guichun and Tourapis, Alexis},
+  title       = {Redesign of the Warp Mode Signaling Flow},
+  institution = {Alliance for Open Media, Codec Working Group},
+  type        = {Input Document},
+  number      = {CWG-F017},
+  year        = {2025}
+}
+@techreport{cwgF050,
+  author      = {Wu, Yeqing and Zheng, Yunfei and Gao, Han and Du, Yixin and Jin, Guoxin and Kuusela, Aki and Li, Guichun and Tourapis, Alexis},
+  title       = {{DRL} and {WRL} Line Buffer Reduction},
+  institution = {Alliance for Open Media, Codec Working Group},
+  type        = {Input Document},
+  number      = {CWG-F050},
+  year        = {2025}
+}
+@techreport{cwgF075,
+  author      = {Wu, Yeqing and Zheng, Yunfei and Gao, Han and Du, Yixin and Jin, Guoxin and Kuusela, Aki and Li, Guichun and Tourapis, Alexis},
+  title       = {{TMVP} Motion Vector Memory Reduction},
+  institution = {Alliance for Open Media, Codec Working Group},
+  type        = {Input Document},
+  number      = {CWG-F075},
+  year        = {2025}
+}
+@techreport{cwgF082,
+  author      = {Liu, Ziyi and Wang, Qi and Gu, Qunshan and Hu, Hongwei},
+  title       = {Extended {DPB} Mode for {AV2} in {RTC}},
+  institution = {Alliance for Open Media, Codec Working Group},
+  type        = {Input Document},
+  number      = {CWG-F082},
+  year        = {2025}
+}
+@techreport{cwgF280,
+  author      = {Wu, Yeqing and Zheng, Yunfei and Gao, Han and Du, Yixin and Jin, Guoxin and Tourapis, Alexis},
+  title       = {Removal of {WARPMV} {WARP\_CAUSAL}},
+  institution = {Alliance for Open Media, Codec Working Group},
+  type        = {Input Document},
+  number      = {CWG-F280},
+  year        = {2025}
 }

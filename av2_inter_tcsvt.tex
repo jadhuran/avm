@@ -53,7 +53,17 @@
 \setcounter{dbltopnumber}{2}
 \setcounter{totalnumber}{4}
 
+% Slightly less space above section and subsection headings than the
+% IEEEtran journal defaults (3.0ex and 3.5ex), same heading styles.
+\makeatletter
+\def\section{\@startsection{section}{1}{\z@}{2.5ex plus 1ex minus 1ex}%
+{0.7ex plus 0.5ex minus 0ex}{\normalfont\normalsize\centering\scshape}}%
+\def\subsection{\@startsection{subsection}{2}{\z@}{2.5ex plus 1ex minus 1ex}%
+{0.7ex plus 0.5ex minus 0ex}{\normalfont\normalsize\itshape}}%
+\makeatother
+
 \begin{document}
+\bstctlcite{IEEEexample:BSTcontrol}
 
 \title{An Overview of Inter Coding Tools in AV2}
 
@@ -88,29 +98,19 @@
 \maketitle
 
 \begin{abstract}
-AOMedia Video 2 (AV2) is the next-generation video coding format of the
-Alliance for Open Media (AOMedia). It improves coding efficiency over its
-predecessor, AOMedia Video 1 (AV1), by
-roughly 30\%, and inter prediction is one of the main sources of that gain. This
-paper gives a complete, self-contained overview of the inter coding tools in
-AV2. We describe what each tool does, why it was designed the way it was, and
-what it costs in hardware. The tools fall into five groups. First, a redesigned
-reference frame system that stores up to 16 frames and can rank references
-implicitly. Second, new prediction tools: Temporal Interpolated Prediction
-(TIP), sub-block and optical-flow motion vector (MV) refinement, an extended
-family of warped motion modes built around a Warp Reference List, a generalized
-wedge mode, an implicit wedge mode for picture boundaries, compound weighted
-prediction, and block adaptive weighted prediction. Third, an improved MV
-prediction framework that combines a simplified spatial search, trajectory-based
-temporal MV prediction with compressed storage, and a reference MV bank. Fourth,
-a new MV coding scheme with adaptive and joint MV difference (MVD) coding,
-flexible MV resolution, and shell-based MVD entropy coding. Fifth, Backward
-Reference Updating (BRU), which lets a decoder update only the changed regions
-of a frame in place for low-power, low-latency use cases. Experiments with the
-AV2 reference software show the contribution of each tool under random access
-and low delay test conditions. For example, TIP alone accounts for 1.40\% of
-bit-rate savings in random access, and the warp tools together account for
-4.18\% and 5.60\% in random access and low delay, respectively.
+AOMedia Video 2 (AV2), the next-generation video coding format of the
+Alliance for Open Media, reduces the bit rate by about 30\% compared with
+AOMedia Video 1 (AV1), and inter prediction is one of the main sources of this
+gain. This paper gives an overview of the inter coding tools in AV2: what each
+tool does, why it was designed that way, and what it costs in hardware. The
+tools cover five areas: a larger reference frame buffer with implicit
+reference ranking; new prediction tools, including temporal interpolated
+prediction (TIP), decoder-side motion vector refinement, and extended warped
+motion; improved motion vector prediction; new motion vector coding; and
+backward reference updating for low-power decoding. Experiments with the AV2
+reference software measure the gain of each tool. For example, TIP alone
+reduces the bit rate by 1.40\% in random access, and the warp tools together
+by 4.18\% and 5.60\% in random access and low delay, respectively.
 \end{abstract}
 
 \begin{IEEEkeywords}
@@ -164,7 +164,7 @@ derivation), and several tools were redesigned specifically to bound memory
 use (for example, the spatial MV search, the temporal MV storage, and the
 reference MV bank). In the other direction, AV1's overlapped block motion
 compensation (OBMC)~\cite{av1obmc}, which is less hardware friendly, was removed
-from AV2 in favor of the new tools.
+from AV2~\cite{cwgD165} in favor of the new tools.
 
 This paper is an overview of all the inter coding tools in AV2. It extends our
 two conference papers~\cite{av2inter_icip,av2warp_companion} into a single, unified
@@ -174,7 +174,7 @@ the basics of video coding, but not AV1 or AV2, can follow every tool. The
 main contributions of the paper are:
 \begin{itemize}
   \item a unified description of the AV2 inter coding toolset, organized by
-        the stage of the inter coding process it improves (Table~\ref{tab:tool_summary});
+        the stage of the inter coding process it improves;
   \item for each tool, an explanation of the motivation, the algorithm, the
         signaling, and the measures taken to keep hardware cost low;
   \item a per-tool evaluation with the AV2 reference software under the AOMedia
@@ -185,56 +185,13 @@ main contributions of the paper are:
 The rest of the paper is organized as follows. Section~\ref{sec:background}
 reviews inter coding in AV1, which is the starting point for AV2.
 Section~\ref{sec:refsys} describes the reference frame system.
-Section~\ref{sec:pred} presents the inter prediction tools.
+Section~\ref{sec:pred} presents the inter prediction tools: TIP, sub-block MV
+refinement (SMVR), optical-flow MV refinement (OPFL), warped motion, wedge
+modes, and weighted prediction.
 Sections~\ref{sec:mvpred} and~\ref{sec:mvcoding} cover MV prediction and MV
 coding, respectively. Section~\ref{sec:bru} describes Backward Reference
-Updating. Section~\ref{sec:results} reports experimental results, and
-Section~\ref{sec:conclusion} concludes the paper.
-
-\begin{table*}[t]
-\centering
-\caption{Summary of the AV2 inter coding tools covered in this paper, compared with AV1. Section numbers are given in parentheses.}
-\label{tab:tool_summary}
-\renewcommand{\arraystretch}{1.08}
-\setlength{\tabcolsep}{4pt}
-\footnotesize
-\begin{tabular}{@{}p{2.9cm}p{6.0cm}p{8.6cm}@{}}
-\toprule
-\textbf{Area} & \textbf{AV1} & \textbf{AV2} \\
-\midrule
-Reference frames (\ref{sec:refsys})
- & 8 stored frames; 7 references; explicit assignment; 16 compound pairs
- & 16 stored frames; 7 references; explicit or implicit (score-based) ranking; 18 compound pairs \\
-New prediction mode (\ref{sec:tip})
- & ---
- & Temporal Interpolated Prediction (TIP): reference mode and direct-output mode \\
-MV refinement (\ref{sec:refine})
- & ---
- & Sub-block MV refinement (SMVR); optical-flow MV refinement (OPFL) \\
-Warped motion (\ref{sec:warp})
- & Global warp; local warp (least squares, one reference)
- & Warp Reference List; warp-mv, warp-new-mv with delta, warp extend, compound warp causal; short-tap and $4{\times}4$ warp filters \\
-Compound masks (\ref{sec:wedge})
- & 16 hand-designed wedge masks per block size
- & Up to 68 parametric wedge masks; implicit wedge mode at picture boundaries \\
-Weighted prediction (\ref{sec:weighted})
- & Distance-based weights
- & Compound weighted prediction (signaled weights); block adaptive weighted prediction \\
-OBMC
- & Overlapped block motion compensation
- & Removed \\
-MV prediction (\ref{sec:mvpred})
- & Spatial search over three rows/columns; linear-projection temporal MV
- & Simplified spatial search, half-size line buffer; trajectory-tracking temporal MV prediction (TMVP) with 16-bit MV storage; reference MV bank \\
-MV coding (\ref{sec:mvcoding})
- & 15-bit MV range; frame-level $1/4$ or $1/8$ precision; separable MV difference (MVD) coding
- & 17-bit range; frame- and block-level precision (FMVR); adaptive MVD; joint MVD; shell-based MVD coding \\
-Low-power decoding (\ref{sec:bru})
- & ---
- & Backward Reference Updating (BRU) \\
-\bottomrule
-\end{tabular}
-\end{table*}
+Updating (BRU) for low-power decoding. Section~\ref{sec:results} reports
+experimental results, and Section~\ref{sec:conclusion} concludes the paper.
 
 %% =============================================================================
 \section{Background: Inter Coding in AV1}
@@ -268,9 +225,8 @@ same reference~\cite{warp-motion}. We review the warp model in more detail in
 Section~\ref{sec:warp}.
 
 \subsection{Compound Prediction}
-Figure~\ref{fig:compound} shows the idea of compound prediction. The current
-block has two MVs, each pointing into a different reference frame, and the two
-predictors $P_0$ and $P_1$ are blended:
+In compound prediction, the current block has two MVs, each pointing into a
+different reference frame, and the two predictors $P_0$ and $P_1$ are blended:
 \begin{equation}
   P = w\,P_0 + (1-w)\,P_1 .
   \label{eq:compound_generic}
@@ -284,15 +240,6 @@ and $P_1$, and a \emph{wedge} mode, in which one of 16 predefined masks splits
 the block along an oblique line. AV1 also has a combined inter-intra mode and
 OBMC, both of which blend a single inter predictor with another signal.
 
-\begin{figure}[t]
-  \centering
-  \includegraphics[width=0.80\columnwidth]{figures/compound.pdf}
-  \caption{Compound prediction. The coding block is predicted from two
-  reference blocks $P_0$ and $P_1$, located by two motion vectors
-  $\mathrm{MV}_0$ and $\mathrm{MV}_1$. The prediction is more accurate than
-  single prediction, but both MVs must be signaled.}
-  \label{fig:compound}
-\end{figure}
 
 \subsection{MV Prediction and Coding}
 MVs are coded predictively: the encoder sends the difference (MVD) between the
@@ -308,7 +255,7 @@ current frame. AV1 codes the row and column components of the MVD separately.
 \label{sec:refsys}
 %% =============================================================================
 
-AV2 doubles the size of the DPB to 16 frames. Each inter frame still uses up
+AV2 doubles the size of the DPB to 16 frames~\cite{cwgF082}. Each inter frame still uses up
 to seven of them as references, but a larger buffer lets the encoder keep
 useful frames, such as a long-term background frame or frames from different
 layers, for a longer time.
@@ -316,8 +263,8 @@ layers, for a longer time.
 \subsection{Explicit and Implicit Reference Mapping}
 AV2 supports two ways to decide which seven frames are used as references.
 In \emph{explicit mapping}, as in AV1, the frame header lists which buffer
-slot each reference index 1--7 points to. In \emph{implicit mapping}, the
-encoder sends nothing. Both the encoder and the decoder compute a score for
+slot each reference index 1--7 points to. In \emph{implicit
+mapping}~\cite{cwgB091}, the encoder sends nothing. Both the encoder and the decoder compute a score for
 every frame in the DPB and pick the seven frames with the lowest scores.
 Reference index 1 is the best (lowest-score) frame, index 2 the next, and so
 on. The score of a candidate reference frame is
@@ -347,11 +294,11 @@ ordering in compound prediction.
 \subsection{Compound Reference Pairs}
 Single prediction may use any of the seven references. For compound
 prediction, AV2 allows only the pairs $(a,b)$ with $1\le a\le 3$ and
-$a\le b\le 7$, i.e., every allowed pair contains at least one of the three
+$a\le b\le 7$~\cite{cwgB091}, i.e., every allowed pair contains at least one of the three
 best-ranked references. For example, $(1,5)$ is allowed but $(4,7)$ is not.
 This gives $7+6+5=18$ pairs. Note that pairs $(1,1)$, $(2,2)$, and $(3,3)$
 are allowed, i.e., compound prediction with two different MVs into the
-\emph{same} reference frame. Restricting the
+\emph{same} reference frame~\cite{cwgC042}. Restricting the
 pairs keeps the signaling of the reference pair cheap.
 
 %% =============================================================================
@@ -418,25 +365,15 @@ with hardware decoders that process one superblock at a time.
         bi-prediction-like quality for close to the cost of a single
         prediction.
   \item \emph{TIP direct output mode.} The TIP frame is used directly as the
-        reconstructed current frame. Apart from a frame-level MV offset,
-        nothing is coded for the frame: no block modes, no residual. This is
+        reconstructed current frame. Apart from a frame-level MV
+        offset~\cite{cwgD063}, nothing is coded for the frame: no block modes, no residual. This is
         very efficient at low bit rates and also reduces both encoder and
         decoder work for that frame.
 \end{itemize}
 
-\begin{figure*}[t]
-  \centering
-  \includegraphics[width=0.80\textwidth]{figures/tip_block.pdf}
-  \caption{Block-level TIP reconstruction. For block $blk\_A$, only $mv\_A$
-  is parsed. The projected MVs $mfmv0$ and $mfmv1$ come from the TMVP motion
-  field at the collocated position. The two predictors are formed with
-  $mv0 = mfmv0 + mv\_A$ and $mv1 = mfmv1 + mv\_A$ and then averaged.}
-  \label{fig:tip_block}
-\end{figure*}
-
 \subsubsection{Block-Level Reconstruction}
-Fig.~\ref{fig:tip_block} shows how a block $blk\_A$ is reconstructed with
-TIP. The decoder (1) identifies, at the frame level, the two references
+A block $blk\_A$ is reconstructed with
+TIP as follows. The decoder (1) identifies, at the frame level, the two references
 $ref0$ and $ref1$ used by TIP; (2) parses $mv\_A$, which is the block MV in
 TIP reference mode and the frame-level offset MV in TIP direct output mode;
 (3) reads $mfmv0$ and $mfmv1$ from the TMVP motion field at the position
@@ -480,11 +417,11 @@ corrects small sub-pel errors.
 
 \subsubsection{Sub-Block MV Refinement (SMVR)}
 \label{sec:smvr}
-SMVR~\cite{av2smvr} applies to compound blocks whose two references are on
-opposite sides of the current frame at equal temporal distances. As shown in
-Fig.~\ref{fig:smvr}, a block larger than $16{\times}16$ is split into
-$16{\times}16$ sub-blocks; a smaller block is treated as a single sub-block.
-For each sub-block, the decoder tests offsets $\Delta mv$ in a $5{\times}5$
+SMVR~\cite{av2smvr,cwgD031} applies to compound blocks whose two references are on
+opposite sides of the current frame at equal temporal distances. A block
+larger than $16{\times}16$ is split into $16{\times}16$ sub-blocks; a smaller
+block is treated as a single sub-block. As shown in Fig.~\ref{fig:smvr}, for
+each sub-block the decoder tests offsets $\Delta mv$ in a $5{\times}5$
 integer-pel window around the initial MVs. The offset is applied in
 \emph{mirrored} form,
 \begin{equation}
@@ -505,13 +442,12 @@ video, so the decoder can repeat it exactly.
 
 \begin{figure*}[t]
   \centering
-  \includegraphics[width=0.72\textwidth]{figures/smvr.pdf}
-  \caption{Sub-block MV refinement (SMVR). Left: a $64{\times}64$ block is split
-  into sixteen $16{\times}16$ sub-blocks; a block of $16{\times}16$ or less is
-  one sub-block. Right: for each sub-block, 25 integer offsets $\Delta mv$
-  around the initial MVs are tested. $P_0$ moves by $+\Delta mv$ and $P_1$ by
-  $-\Delta mv$, and the offset with the smallest SAD between $P_0$ and $P_1$
-  is kept.}
+  \includegraphics[width=0.72\textwidth]{figures/smvr_simple.pdf}
+  \caption{Sub-block MV refinement (SMVR) for one $16{\times}16$ sub-block.
+  The initial MVs $\mathrm{MV}_0$ and $\mathrm{MV}_1$ (blue) point into ref0
+  and ref1. For each tested offset $\Delta mv$, $P_0$ moves by $+\Delta mv$
+  and $P_1$ by $-\Delta mv$ (red). Of the 25 integer offsets, the one with the
+  smallest SAD between $P_0$ and $P_1$ is kept.}
   \label{fig:smvr}
 \end{figure*}
 
@@ -534,7 +470,7 @@ SMVR the same as that of regular compound prediction.
 
 \subsubsection{Optical-Flow MV Refinement (OPFL)}
 \label{sec:opfl}
-OPFL estimates a small, sub-pel motion correction in closed form. It is based
+OPFL~\cite{cwgB041} estimates a small, sub-pel motion correction in closed form. It is based
 on bi-directional optical flow (BDOF)~\cite{alshin2010bi-directional}, as used
 in VVC~\cite{vvc_subblock}, generalized so that it also works when the two
 temporal distances are not equal~\cite{lu2021generalized}.
@@ -653,7 +589,7 @@ new prediction filters for large models.
 
 \subsubsection{Warp Reference List (WRL)}
 \label{sec:wrl}
-Much like the DRL provides MV predictors, the WRL provides candidate warp
+Much like the DRL provides MV predictors, the WRL~\cite{cwgC061} provides candidate warp
 models, so that a block can pick a model with a short index instead of
 signaling six parameters. The WRL has four entries and is built from
 previously decoded information in four steps.
@@ -709,14 +645,15 @@ determine an affine model exactly. With block width $W$ and height $H$
   h_{13} &= x'_0 - h_{11}x_0 - h_{12}y_0, &
   h_{23} &= y'_0 - h_{21}x_0 - h_{22}y_0. \label{eq:corner_h23}
 \end{align}
-If a model is found, it becomes the first WRL entry.
+If a model is found, it becomes the first WRL entry~\cite{cwgD067}.
 
 \emph{Step 2: spatial neighbors.} The decoder visits the spatial neighbors
 in the same order used to build the DRL (Fig.~\ref{fig:spatial_scan},
 Section~\ref{sec:smvp}). Each neighbor coded in a warp mode adds its model to
 the WRL while there is room.
 
-\emph{Step 3: history buffer.} The decoder keeps a small circular buffer that
+\emph{Step 3: history buffer.} The decoder keeps a small circular
+buffer~\cite{cwgC087} that
 holds the warp models of the four most recently decoded warp blocks in the
 current superblock row. It is reset at the start of every superblock row.
 Models from this buffer fill remaining WRL entries. This makes models from
@@ -762,13 +699,13 @@ warp-new-mv/causal & DRL + MVD & least squares (as AV1) \\
 \end{table}
 
 \emph{warp-mv.} The whole model is taken from the WRL entry selected by
-\code{warp\_ref\_idx}. No delta is sent for the non-translational parameters.
+\code{warp\_ref\_idx}~\cite{cwgC089,cwgF017,cwgF280}. No delta is sent for the non-translational parameters.
 For the first two WRL entries (\code{warp\_ref\_idx}${}<2$), an MVD is sent to
 correct the translational part.
 
 \emph{warp-new-mv with warp delta.} The translational part is predicted from
 the DRL (\code{drl\_idx}) and corrected by an MVD, while the non-translational
-part is predicted from the WRL (\code{warp\_ref\_idx}). Separating the two
+part is predicted from the WRL (\code{warp\_ref\_idx})~\cite{cwgC050}. Separating the two
 parts gives extra flexibility: the block can follow a neighbor's zoom or
 rotation while having its own translation. Depending on
 \code{warp\_ref\_idx}, a delta may be sent for the non-translational part. To
@@ -791,7 +728,7 @@ individually.
 warp-new-mv with a DRL-predicted translation.
 
 \subsubsection{Warp Extend Mode}
-Warp extend builds a model for the current block from the model of a
+Warp extend~\cite{cwgC050} builds a model for the current block from the model of a
 neighbor, without sending any non-translational parameters. Only the
 translational MV is coded (with a DRL index and an MVD). The model is chosen
 to satisfy two conditions. \emph{Condition~1 (continuity):} along the common
@@ -850,7 +787,7 @@ cannot be used together in the same block.
 
 \subsubsection{Compound Warp Causal Mode}
 In AV1, the least-squares (causal) warp mode works only with single
-prediction. AV2 extends it to compound prediction: a warp model is estimated
+prediction. AV2 extends it to compound prediction~\cite{cwgD166}: a warp model is estimated
 separately for each of the two references, the two warped predictions are
 formed, and they are averaged. This mode is allowed only with
 \code{NEW\_NEWMV}, where both MVs are explicitly coded.
@@ -875,9 +812,9 @@ shown in Algorithm~\ref{alg:warp_filter}.
 \end{algorithm}
 
 For moderate models, AV2 keeps the shear-based filter but uses shorter filter
-taps at the boundary of the predicted block, so that an $8{\times}8$
+taps at the boundary of the predicted block~\cite{cwgE236}, so that an $8{\times}8$
 prediction still reads no more than a $15{\times}15$ reference area. For large
-models, the block is split into $4{\times}4$ sub-blocks. Each sub-block gets a
+models, the block is split into $4{\times}4$ sub-blocks~\cite{cwgD067}. Each sub-block gets a
 translational MV from the warp model at its center $(x_c,y_c)$,
 \begin{align}
   \mathrm{MV}_x &= (h_{11}-1)\,x_c + h_{12}\,y_c + h_{13}, \\
@@ -896,7 +833,7 @@ bandwidth is thus the same as in AV1.
 A wedge mode blends two predictors with a mask that splits the block along a
 straight line, which helps at object boundaries where each side of the block
 follows a different motion. AV1 provides 16 hand-designed masks per block
-size. AV2 instead defines the masks with a formula~\cite{av2wedge}. A straight
+size. AV2 instead defines the masks with a formula~\cite{av2wedge,cwgC092}. A straight
 line is written in Hessian normal form,
 \begin{equation}
   d(x,y) = x\cos\varphi - y\sin\varphi + \rho ,
@@ -949,7 +886,7 @@ When an MV points partly outside the reference picture, the samples outside
 the picture are made by repeating the border samples. Such samples are poor
 predictions. In compound prediction it often happens that one predictor is
 inside the picture where the other is outside, for example when the camera
-pans. IWM handles this case automatically (Fig.~\ref{fig:iwm}). For each
+pans. IWM~\cite{cwgD071} handles this case automatically (Fig.~\ref{fig:iwm}). For each
 sample, the decoder checks whether each of the two reference positions is
 inside the reference picture. If both are inside, or both are outside, the
 weights (out of 64) are $(32,32)$, i.e., normal averaging. If only one is
@@ -971,8 +908,8 @@ fully outside the picture. It needs no signaling.
 \label{sec:weighted}
 
 \subsubsection{Compound Weighted Prediction (CWP)}
-Simple averaging is optimal only if both predictors are equally good. CWP
-lets the encoder choose an unequal weight for \code{COMPOUND\_AVERAGE}
+Simple averaging is optimal only if both predictors are equally good.
+CWP~\cite{cwgD027} lets the encoder choose an unequal weight for \code{COMPOUND\_AVERAGE}
 blocks:
 \begin{equation}
   P(x,y) = \big(W\,P_0(x,y) + (16-W)\,P_1(x,y) + 8\big) \gg 4,
@@ -992,7 +929,7 @@ candidate.
 \subsubsection{Block Adaptive Weighted Prediction (BAWP)}
 Brightness changes, such as fades, flashes, or a light switched on in part of
 the scene, make even a perfectly aligned reference block look different from
-the current block. BAWP~\cite{inter_bacp} corrects this with a linear model
+the current block. BAWP~\cite{inter_bacp,cwgC069} corrects this with a linear model
 per color component,
 \begin{equation}
   P'(x,y) = \alpha\,P(x,y) + \beta ,
@@ -1000,7 +937,7 @@ per color component,
 \end{equation}
 where $P$ is the regular inter prediction. The offset $\beta$ is always
 derived at the decoder. The scale $\alpha$ is either derived at the decoder
-(implicit BAWP) or signaled (explicit BAWP).
+(implicit BAWP) or signaled (explicit BAWP~\cite{cwgD048}).
 
 For the implicit derivation, the current block has an L-shaped template of
 already reconstructed samples above and to the left of it. The reference
@@ -1038,7 +975,7 @@ quality of the MV predictor matters a lot. AV2 builds its DRL from several
 sources (Fig.~\ref{fig:drl}): spatial MV prediction (SMVP) from adjacent
 neighbors, temporal MV prediction (TMVP) from the projected motion field, non-adjacent spatial
 neighbors, the reference MV bank, candidates derived from combinations of
-other candidates, and the global motion model. The candidates are ranked, and
+other candidates~\cite{cwgB049}, and the global motion model. The candidates are ranked, and
 the encoder signals the index of the one it uses. Below we describe the
 sources and then the ranking.
 
@@ -1056,7 +993,7 @@ sources and then the ranking.
 \label{sec:smvp}
 The spatial neighbors of the current block are checked for blocks that use the
 same reference frame (for compound blocks, the same pair of references). AV2
-simplifies the AV1 search, which scanned up to three block rows above and
+simplifies the AV1 search~\cite{cwgC043,cwgE021}, which scanned up to three block rows above and
 three block columns to the left. AV2 checks up to nine neighbors in the fixed
 order shown in Fig.~\ref{fig:spatial_scan}. Positions 1--7 are adjacent to the
 block; positions 8 and 9 are in the second column to the left. The first six
@@ -1099,7 +1036,8 @@ be kept in a \emph{line buffer}, an on-chip memory whose size is set by the
 widest frame allowed. Since the smallest block in AV2 is $4{\times}4$, storing
 MVs at $4{\times}4$ granularity for a whole frame width is expensive. AV2
 therefore reads only the even-indexed $4{\times}4$ units (counting from 0) of
-the last row of the superblock above, which halves the line buffer. Inside the
+the last row of the superblock above, which halves the line
+buffer~\cite{cwgF050}. Inside the
 current superblock, all $4{\times}4$ units can be used, because that
 information is in local memory anyway. The left context depends only on the
 superblock size, so its cost is small, but AV2 uses the same subsampling on the
@@ -1117,7 +1055,7 @@ in three ways.
 
 \subsubsection{Motion Projection Order}
 The stored MVs of different reference frames are not equally useful. AV2
-orders the projection by temporal distance, which is a good proxy for
+orders the projection by temporal distance~\cite{cwgB049}, which is a good proxy for
 correlation. Nearby past and future references whose MVs point towards the
 current frame are processed first, in order of priority. Then the motion
 fields of the two closest past references whose MVs point away from the
@@ -1128,7 +1066,8 @@ collected, which bounds the projection work.
 AV1 projects a single stored MV along a straight line
 (Fig.~\ref{fig:tmvp_traj}(a)). This fails when the motion is not linear, for
 example for objects on curved paths, for accelerating objects, or for camera
-shake. AV2 instead follows motion trajectories over several references
+shake. AV2 instead follows motion trajectories over several
+references~\cite{cwgE115}
 (Fig.~\ref{fig:tmvp_traj}(b)). It keeps a two-way mapping between blocks of
 the current frame and blocks of the reference frames. When a stored MV starts
 or ends at a block that is already on a trajectory, the MV is appended to that
@@ -1151,7 +1090,7 @@ references them, so their size directly sets memory bandwidth. AV2 reduces
 this cost with three techniques.
 
 \emph{MV compression.} In AV1, a stored MV takes 26 bits: two components, each
-with a sign and 12 magnitude bits. AV2 stores 16 bits per MV
+with a sign and 12 magnitude bits. AV2 stores 16 bits per MV~\cite{cwgF075}
 (Fig.~\ref{fig:tmvp_comp}). First, one magnitude bit per component is dropped,
 so magnitudes are limited to $[0, 2047]$ (larger MVs are discarded). Second,
 the 11-bit magnitude is quantized to a 7-bit index with eight bins: values up
@@ -1173,21 +1112,21 @@ large ones. The mapping needs only shifts.
 \emph{Directional storage.} Each $8{\times}8$ block of a reference frame can
 store two MVs. Usually only one of them is useful for a given current frame,
 namely the one that points towards it. AV2 assigns the two slots by
-direction, one for an MV pointing to the past and one for an MV pointing to
+direction~\cite{cwgE115}, one for an MV pointing to the past and one for an MV pointing to
 the future, so a decoder can load only the slot it needs.
 
 \emph{Adaptive sampling.} Only stored MVs within a limited window around the
 collocated area can be used, which bounds the memory a hardware decoder must
 hold. A larger window covers larger motion but needs more memory. AV2 lets the
 codec use either a small window with all MVs, or a larger window with 1:4
-subsampled MVs. The first suits slow motion, where precision matters; the
+subsampled MVs~\cite{cwgE115}. The first suits slow motion, where precision matters; the
 second suits fast motion, where coverage matters.
 
 \subsection{Reference MV Bank}
 \label{sec:bank}
 Spatial candidates come only from the immediate neighborhood. Good predictors
 are often found farther away, for example on the same object a few blocks to
-the left. The reference MV bank~\cite{av2spec} makes such non-local MVs
+the left. The reference MV bank~\cite{av2spec,cwgB023} makes such non-local MVs
 available without complex search rules or large memory.
 
 \begin{figure}[t]
@@ -1201,7 +1140,7 @@ available without complex search rules or large memory.
 
 The bank is a set of small buffers. A buffer for every possible reference type
 (each single reference and each compound pair) would be large, so AV2 uses a
-frequency-based design (Fig.~\ref{fig:mv_bank}): the most frequently used
+frequency-based design~\cite{cwgE119} (Fig.~\ref{fig:mv_bank}): the most frequently used
 reference types get their own buffers, and the less frequent types share one
 buffer. After an inter block is decoded, its MV is added to the buffer of its
 reference type: an MV not yet in the buffer is appended at the end, and an MV
@@ -1225,8 +1164,6 @@ first four entries form the DRL; the candidate with the largest weight from
 Group~1 always takes the first slot. If fewer candidates are available, the
 list is shorter, which saves bits for the index. The encoder sends the index
 of the selected predictor.
-\authnote{Please add one or two sentences on how non-adjacent and derived
-SMVP candidates are formed.}
 
 For each block, AV2 signals whether the selected predictor is used as is or
 whether an MVD follows. For compound modes, this gives four cases depending on
@@ -1254,7 +1191,7 @@ A more precise MV gives a better prediction but costs more bits. In a smooth,
 slow region $1/8$-pel precision pays off; in a fast, blurry region it does
 not. AV1 can only choose $1/4$- or $1/8$-pel precision per frame. AV2 adds
 $1/2$-pel to the frame-level choice (a ternary flag) and, more importantly,
-lets each block choose its own precision~\cite{fmvr}, within a set determined
+lets each block choose its own precision~\cite{fmvr,cwgC020}, within a set determined
 by the frame-level maximum (Table~\ref{tab:fmvr}). The block precision is sent
 before the MVD: one flag says whether the block uses the frame precision, and
 if not, a further symbol selects one of the other allowed values.
@@ -1279,7 +1216,7 @@ $1/2$ & $1/2,\ 1,\ 4,\ 8$ \\
 \label{sec:amvd}
 In AV1 the MVD has the same precision regardless of its size. But a large MVD
 usually means the predictor was poor, and for such a block a very precise
-correction is not worth its cost. AMVD~\cite{av2amvd} ties the precision to the
+correction is not worth its cost. AMVD~\cite{av2amvd,cwgB092} ties the precision to the
 magnitude: small MVDs are coded at fine precision and large ones at coarse
 precision. In AMVD modes, the MVD magnitude (in $1/8$ pel) is restricted to
 the set $\{0, 2, 4, 6, 8, 16, 32, 64, 128\}$, so only a short index is coded.
@@ -1291,7 +1228,7 @@ AMVD is available in \code{NEWMV}, \code{NEW\_NEWMV}, \code{NEW\_NEARMV},
 \label{sec:jmvd}
 In compound prediction, the MV errors of the two references are often related:
 if the object moves at constant speed, the correction needed for one MV is a
-scaled copy of the correction needed for the other. JMVD sends only one MVD,
+scaled copy of the correction needed for the other. JMVD~\cite{cwgB092} sends only one MVD,
 $\mathrm{joint\_mvd}$, which is applied to the reference that is farther in
 time, and derives the MVD of the other reference by scaling with the temporal
 distances $d_0$ and $d_1$:
@@ -1310,7 +1247,7 @@ codes one MVD instead of two for a compound block.
 \label{sec:mvd_coding}
 AV1 codes the row and the column of the MVD separately. The two components are
 not independent, however: if one is large the other tends to be large too.
-AV2 codes them jointly using \emph{shells}. All MVDs with the same sum of
+AV2 codes them jointly using \emph{shells}~\cite{cwgE014}. All MVDs with the same sum of
 absolute components form one shell,
 \begin{equation}
   |\mvd_r| + |\mvd_c| = \mathrm{shell\_index},
@@ -1393,10 +1330,11 @@ $\mathit{thr} \leftarrow 4$ \textbf{if} mode is \code{NEW\_NEWMV} (or its OPFL v
 
 \subsection{Motivation}
 In some applications, such as screen mirroring, remote desktop, or a drawing
-app, most of the picture does not change from frame to frame. A conventional
+app, most of the picture does not change from frame to frame
+(Fig.~\ref{fig:bru_motiv}). A conventional
 decoder still processes the full frame: it reads the reference frame, writes a
 complete new frame into the DPB, and runs the in-loop filters
-everywhere (Fig.~\ref{fig:bru_motiv}). For 4K 4:2:0 8-bit video, a frame is
+everywhere. For 4K 4:2:0 8-bit video, a frame is
 about 12.4\,MB, so reading and writing it costs about 25\,MB of memory traffic
 per frame, or about 1.5\,GB/s at 60 frames per second, even when only a small
 stroke has changed. BRU~\cite{bru} lets a decoder avoid most of this work. It
@@ -1407,9 +1345,9 @@ new frame.
 \begin{figure*}[t]
   \centering
   \includegraphics[width=0.64\textwidth]{figures/bru_motiv.pdf}
-  \caption{Motivation for BRU. In sparse-activity content, only a small region
-  changes between frames. A conventional decoder still reads the reference
-  frame and writes a complete new frame for every decoded frame.}
+  \caption{Motivation for BRU. In sparse-activity content, such as a drawing
+  app, only a small active region (red box) changes from frame $n$ to frame
+  $n+1$; the rest of the frame stays the same.}
   \label{fig:bru_motiv}
 \end{figure*}
 
@@ -1423,28 +1361,11 @@ intra prediction and in-loop filtering at the edge of the active region see
 correct neighboring samples. Because of the support ring, no coding tool needs
 special rules at the boundary of an active region.
 
-Inactive and support superblocks are not parsed. They use an implied inter
-mode (Table~\ref{tab:bru_mode}): the whole superblock is one inter block that
-uses the BRU reference with a zero MV and no residual.
-
-\begin{table}[t]
-\centering
-\caption{Implied coding parameters of inactive and support superblocks in BRU.}
-\label{tab:bru_mode}
-\renewcommand{\arraystretch}{1.15}
-\begin{tabular}{@{}ll@{}}
-\toprule
-\textbf{Parameter} & \textbf{Value} \\
-\midrule
-Partition       & superblock size (implied split at frame boundary) \\
-Prediction      & inter, skip mode off \\
-Inter mode      & \code{NEWMV} \\
-Reference       & BRU reference (\code{bru\_ref\_idx}) \\
-MV              & $(0,0)$ \\
-Residual        & none (\code{skip\_txfm} $=1$) \\
-\bottomrule
-\end{tabular}
-\end{table}
+Inactive and support superblocks are not parsed. Each is coded with implied
+parameters: the whole superblock (split implicitly at the frame boundary) is
+one inter block in \code{NEWMV} mode with skip mode off, which uses the BRU
+reference (\code{bru\_ref\_idx}) with a zero MV and no residual
+(\code{skip\_txfm}${}=1$).
 
 The signaling is hierarchical, so that the common cases are cheap. A
 sequence-level flag enables BRU. In the frame header, \code{use\_bru} turns
@@ -1531,122 +1452,95 @@ separately.
 
 \begin{table*}[t]
 \centering
-\caption{BD-rate (\%, YUV-PSNR) and run time when individual tools are \emph{disabled}, random access (RA) configuration.
-Positive values are the coding gain of the tool. Overall is the average over A1--A5 and B1.}
-\label{tab:results_ra}
-\renewcommand{\arraystretch}{1.12}
-\begin{tabular}{@{}lrrrrrrrrrr@{}}
+\caption{BD-rate (\%, YUV-PSNR) and run time (\%) when tools are \emph{disabled}, random access (RA) and low delay (LD) configurations.}
+\label{tab:results}
+\renewcommand{\arraystretch}{1.15}
+\setlength{\extrarowheight}{1pt}
+\setlength{\tabcolsep}{1.5pt}
+% No padding around the booktabs rules, so the RA/LD divider is unbroken.
+\setlength{\aboverulesep}{0pt}
+\setlength{\belowrulesep}{0pt}
+\scriptsize
+\begin{tabular*}{\textwidth}{@{\extracolsep{\fill}}l*{10}{r}@{\hspace{\tabcolsep}}c@{\vrule width 1pt\hspace{\tabcolsep}}*{9}{r}@{}}
 \toprule
-\textbf{Tool} & \textbf{A1} & \textbf{A2} & \textbf{A3} & \textbf{A4} & \textbf{A5} & \textbf{B1} & \textbf{Overall} & \textbf{B2} & \textbf{EncT} & \textbf{DecT} \\
+ & \multicolumn{10}{c}{\textbf{Random access}} & & \multicolumn{9}{c}{\textbf{Low delay}} \\
+\cmidrule(lr){2-11}\cmidrule(l){13-21}
+\textbf{Tool} & A1 & A2 & A3 & A4 & A5 & B1 & \textbf{Ovr.} & B2 & EncT & DecT
+              & & A2 & A3 & A4 & A5 & B1 & \textbf{Ovr.} & B2 & EncT & DecT \\
 \midrule
-TIP          & 1.48 & 1.41 & 1.72 & 2.03 & 1.97 & 0.46 & \textbf{1.40} & 0.30  & 105\% & 92\% \\
-OPFL         & 0.62 & 0.89 & 0.81 & 0.98 & 0.99 & 0.71 & \textbf{0.82} & 0.24  & 93\%  & 89\% \\
-AMVD         & 0.75 & 0.72 & 0.41 & 0.27 & 0.67 & 0.72 & \textbf{0.63} & 0.14  & 80\%  & 99\% \\
-SMVR         & 0.85 & 0.59 & 0.55 & 0.28 & 0.28 & 0.50 & \textbf{0.55} & 0.06  & 97\%  & 99\% \\
-BAWP         & 1.24 & 0.20 & 0.12 & 0.37 & $-0.01$ & 0.23 & \textbf{0.35} & 3.48 & 96\% & 100\% \\
-RefMV bank   & 0.43 & 0.42 & 0.11 & 0.03 & 0.23 & 0.47 & \textbf{0.33} & 1.45  & 97\%  & 100\% \\
-JMVD         & 0.40 & 0.27 & 0.14 & 0.08 & 0.28 & 0.24 & \textbf{0.24} & 0.23  & 97\%  & 101\% \\
-IWM          & 0.26 & 0.21 & 0.14 & 0.23 & 0.18 & 0.08 & \textbf{0.18} & $-0.04$ & 100\% & 99\% \\
-MV trajectory& 0.11 & 0.18 & 0.09 & 0.07 & 0.22 & 0.21 & \textbf{0.15} & 0.14  & 98\%  & 96\% \\
+TIP           & 1.48 & 1.41 & 1.72 & 2.03 & 1.97 & 0.46 & \textbf{1.40} & 0.30 & 105 & 92
+              & & 0.41 & 0.28 & 0.69 & 0.63 & $-0.01$ & \textbf{0.35} & $-0.02$ & 99 & 97 \\
+OPFL          & 0.62 & 0.89 & 0.81 & 0.98 & 0.99 & 0.71 & \textbf{0.82} & 0.24 & 93 & 89
+              & & -- & -- & -- & -- & -- & -- & -- & -- & -- \\
+AMVD          & 0.75 & 0.72 & 0.41 & 0.27 & 0.67 & 0.72 & \textbf{0.63} & 0.14 & 80 & 99
+              & & 0.74 & 0.41 & 0.41 & 0.51 & 0.82 & \textbf{0.64} & 0.36 & 100 & 101 \\
+SMVR          & 0.85 & 0.59 & 0.55 & 0.28 & 0.28 & 0.50 & \textbf{0.55} & 0.06 & 97 & 99
+              & & -- & -- & -- & -- & -- & -- & -- & -- & -- \\
+BAWP          & 1.24 & 0.20 & 0.12 & 0.37 & $-0.01$ & 0.23 & \textbf{0.35} & 3.48 & 96 & 100
+              & & 0.36 & 0.13 & 0.37 & $-0.31$ & 0.33 & \textbf{0.26} & 3.27 & 95 & 101 \\
+RefMV bank    & 0.43 & 0.42 & 0.11 & 0.03 & 0.23 & 0.47 & \textbf{0.33} & 1.45 & 97 & 100
+              & & 0.49 & $-0.05$ & 0.14 & 0.18 & 0.39 & \textbf{0.31} & 2.44 & 97 & 99 \\
+JMVD          & 0.40 & 0.27 & 0.14 & 0.08 & 0.28 & 0.24 & \textbf{0.24} & 0.23 & 97 & 101
+              & & -- & -- & -- & -- & -- & -- & -- & -- & -- \\
+IWM           & 0.26 & 0.21 & 0.14 & 0.23 & 0.18 & 0.08 & \textbf{0.18} & $-0.04$ & 100 & 99
+              & & 0.03 & $-0.04$ & 0.09 & $-0.11$ & $-0.03$ & \textbf{0.00} & $-0.11$ & 100 & 100 \\
+MV trajectory & 0.11 & 0.18 & 0.09 & 0.07 & 0.22 & 0.21 & \textbf{0.15} & 0.14 & 98 & 96
+              & & 0.23 & 0.06 & 0.36 & 0.03 & 0.28 & \textbf{0.21} & 0.26 & 98 & 93 \\
+\midrule
+Warp T1       & 0.30 & 0.37 & 0.33 & 0.24 & 0.21 & 0.36 & \textbf{0.33} & 0.95 & 99 & --
+              & & 0.69 & 0.61 & 1.17 & 0.27 & 0.32 & \textbf{0.62} & 0.92 & 98 & -- \\
+Warp T2       & 0.39 & 0.50 & 0.56 & 0.52 & 0.34 & 0.47 & \textbf{0.48} & 0.98 & 96 & --
+              & & 0.88 & 1.23 & 1.46 & 0.58 & 0.51 & \textbf{0.91} & 2.72 & 91 & -- \\
+Warp T3       & 2.06 & 3.54 & 4.69 & 8.59 & 4.37 & 3.92 & \textbf{4.18} & 2.52 & 89 & --
+              & & 5.15 & 5.20 & 11.41 & 3.68 & 4.06 & \textbf{5.60} & 4.12 & 87 & -- \\
 \bottomrule
-\end{tabular}
+\end{tabular*}
+\par\smallskip
+{\scriptsize\raggedright Positive values are the coding gain of the tool. Ovr.: average over A1--A5 and B1 (A2--A5 and B1 in LD). Run times are relative to the anchor. Warp tools are disabled progressively: T1, warp causal off; T2, T1 plus warp extend off; T3, T2 plus warp delta off (all new warp modes off). --: not evaluated (OPFL, SMVR, and JMVD in LD) or not reported (warp decoding time, which is about the same in all tests).\par}
 \end{table*}
 
-\begin{table}[t]
-\centering
-\caption{BD-rate (\%, YUV-PSNR) and run time when individual tools are \emph{disabled}, low delay (LD) configuration. OPFL, SMVR, and JMVD were not evaluated in LD.}
-\label{tab:results_ld}
-\renewcommand{\arraystretch}{1.12}
-\setlength{\tabcolsep}{2.2pt}
-\begin{tabular}{@{}lrrrrrrrrr@{}}
-\toprule
-\textbf{Tool} & \textbf{A2} & \textbf{A3} & \textbf{A4} & \textbf{A5} & \textbf{B1} & \textbf{Ovr.} & \textbf{B2} & \textbf{EncT} & \textbf{DecT} \\
-\midrule
-TIP        & 0.41 & 0.28 & 0.69 & 0.63 & $-0.01$ & \textbf{0.35} & $-0.02$ & 99\%  & 97\% \\
-AMVD       & 0.74 & 0.41 & 0.41 & 0.51 & 0.82 & \textbf{0.64} & 0.36 & 100\% & 101\% \\
-BAWP       & 0.36 & 0.13 & 0.37 & $-0.31$ & 0.33 & \textbf{0.26} & 3.27 & 95\% & 101\% \\
-RefMV bank & 0.49 & $-0.05$ & 0.14 & 0.18 & 0.39 & \textbf{0.31} & 2.44 & 97\% & 99\% \\
-MV traj.   & 0.23 & 0.06 & 0.36 & 0.03 & 0.28 & \textbf{0.21} & 0.26 & 98\% & 93\% \\
-IWM        & 0.03 & $-0.04$ & 0.09 & $-0.11$ & $-0.03$ & \textbf{0.00} & $-0.11$ & 100\% & 100\% \\
-\bottomrule
-\end{tabular}
-\end{table}
-
-Tables~\ref{tab:results_ra} and~\ref{tab:results_ld} list the results for RA
-and LD, respectively. We make the following observations.
+Table~\ref{tab:results} lists the results. We make the following observations.
 
 \emph{TIP} gives the largest gain of any single tool in RA, 1.40\% overall and
 about 2\% for the low-resolution classes A4 and A5. Disabling TIP makes the
-encoder 5\% slower, most likely because the direct output mode and the cheap
-TIP reference let the encoder skip part of its mode search; it makes the
-decoder 8\% faster, which is the cost of producing the TIP prediction. In LD, TIP has to extrapolate from two
-past references and its gain drops to 0.35\%.
+encoder slower, most likely because the direct output mode and the cheap TIP
+reference let the encoder skip part of its mode search, and makes the decoder
+faster, which is the cost of producing the TIP prediction. In LD, TIP has to
+extrapolate from two past references, and its gain drops to a quarter of that
+in RA.
 
-\emph{Decoder-side refinement} is the second most important group. OPFL and
-SMVR together give 1.37\% in RA. Both add decoder computation (11\% for OPFL
-and 1\% for SMVR) and also encoder run time, since the encoder must run the
-same refinement when it evaluates compound modes. They require references on
-both sides of the current frame and so do not apply to LD.
+\emph{Decoder-side refinement} is the second most important group: OPFL and
+SMVR together give 1.37\% in RA. Both add decoder computation, and also
+encoder run time, since the encoder must run the same refinement when it
+evaluates compound modes. They require references on both sides of the current
+frame and so do not apply to LD.
 
-\emph{MV coding tools} give consistent gains in both configurations: AMVD
-gives 0.63\% in RA and 0.64\% in LD, and JMVD a further 0.24\% in RA. AMVD has
-a large effect on encoder run time in RA (disabling it reduces the encoder
-time to 80\%), which we attribute to the additional search over AMVD modes,
-while it does not affect the decoder.
+\emph{MV coding tools} give consistent gains in both configurations. AMVD has
+the largest encoder run-time cost of all tools in RA, which we attribute to
+the additional search over AMVD modes, while it does not affect the decoder.
 
-\emph{BAWP} gives a modest 0.35\% overall but 3.48\% (RA) and 3.27\% (LD) on
-screen content, where fades and brightness changes are common. It also gives 1.24\% on class A1. The
-\emph{reference MV bank} gives 0.33\% (RA) and 0.31\% (LD), and again much
-more on screen content (1.45\% and 2.44\%), presumably because the same motion,
-such as scrolling, repeats over large non-adjacent areas.
+\emph{BAWP} and the \emph{reference MV bank} give modest overall gains but
+much more on screen content (B2), where fades and brightness changes are
+common and the same motion, such as scrolling, repeats over large non-adjacent
+areas. BAWP also gives 1.24\% on class A1.
 
-\emph{MV trajectory tracking} gives 0.15\% in RA and 0.21\% in LD. Its
-decoder cost (4\% and 7\%) comes from the more complex motion field
-construction. \emph{IWM} helps only blocks near picture boundaries and gives
-0.18\% in RA at no measurable complexity.
+\emph{MV trajectory tracking} costs some decoder time because of the more
+complex motion field construction. \emph{IWM} helps only blocks near picture
+boundaries, at no measurable complexity.
 
 \subsection{Warp Tools}
 
-\begin{table*}[t]
-\centering
-\caption{BD-rate (\%, YUV-PSNR) and encoding time when warp tools are progressively disabled.
-Test~1 (T1): warp causal disabled. Test~2 (T2): T1 plus warp extend disabled. Test~3 (T3): T2 plus warp delta disabled (all new warp modes off).}
-\label{tab:results_warp}
-\renewcommand{\arraystretch}{1.12}
-\begin{tabular}{@{}lrrrrrrrrrrrr@{}}
-\toprule
- & \multicolumn{6}{c}{\textbf{Random access}} & \multicolumn{6}{c}{\textbf{Low delay}} \\
-\cmidrule(lr){2-7}\cmidrule(l){8-13}
- & \multicolumn{3}{c}{$\Delta$BD-rate} & \multicolumn{3}{c}{EncT} & \multicolumn{3}{c}{$\Delta$BD-rate} & \multicolumn{3}{c}{EncT} \\
-\cmidrule(lr){2-4}\cmidrule(lr){5-7}\cmidrule(lr){8-10}\cmidrule(l){11-13}
-\textbf{Class} & T1 & T2 & T3 & T1 & T2 & T3 & T1 & T2 & T3 & T1 & T2 & T3 \\
-\midrule
-A1 & 0.30 & 0.39 & 2.06 & 98\% & 96\% & 88\% & -- & -- & -- & -- & -- & -- \\
-A2 & 0.37 & 0.50 & 3.54 & 98\% & 96\% & 87\% & 0.69 & 0.88 & 5.15 & 99\% & 94\% & 86\% \\
-A3 & 0.33 & 0.56 & 4.69 & 99\% & 97\% & 92\% & 0.61 & 1.23 & 5.20 & 98\% & 91\% & 84\% \\
-A4 & 0.24 & 0.52 & 8.59 & 104\% & 97\% & 97\% & 1.17 & 1.46 & 11.41 & 98\% & 91\% & 93\% \\
-A5 & 0.21 & 0.34 & 4.37 & 102\% & 96\% & 96\% & 0.27 & 0.58 & 3.68 & 99\% & 96\% & 90\% \\
-B1 & 0.36 & 0.47 & 3.92 & 97\% & 95\% & 86\% & 0.32 & 0.51 & 4.06 & 99\% & 95\% & 87\% \\
-\midrule
-\textbf{Overall} & \textbf{0.33} & \textbf{0.48} & \textbf{4.18} & 99\% & 96\% & 89\% & \textbf{0.62} & \textbf{0.91} & \textbf{5.60} & 98\% & 91\% & 87\% \\
-B2 & 0.95 & 0.98 & 2.52 & 102\% & 97\% & 97\% & 0.92 & 2.72 & 4.12 & 98\% & 94\% & 96\% \\
-\bottomrule
-\end{tabular}
-\end{table*}
-
 The warp tools were evaluated by disabling them one after another
-(Table~\ref{tab:results_warp}), so the gain of each tool is the difference
-between consecutive tests. Compound warp causal gives 0.33\% (RA) and 0.62\%
-(LD). Warp extend adds 0.15\% (RA) and 0.29\% (LD): reusing a neighbor's model
-captures warped motion over a region at the cost of only an MV. Warp delta,
-which includes the WRL, warp-mv, and warp-new-mv, gives by far the most:
-3.70\% (RA) and 4.69\% (LD). Together, the AV2 warp tools save 4.18\% in RA and
-5.60\% in LD, more than any other group of tools in this paper, and up to
-11.41\% for class A4 in LD. Their gain is larger in LD; a likely reason is that
-LD references are farther away in time, so zoom and rotation accumulate. The cost is mainly on
-the encoder side, which becomes 11\% (RA) and 13\% (LD) faster when all warp
-tools are disabled, mostly because of the parameter search in warp delta. The
-decoding time is about the same in all tests.
+(rows T1--T3 of Table~\ref{tab:results}), so the gain of each tool is the
+difference between consecutive tests. Compound warp causal gives 0.33\% (RA)
+and 0.62\% (LD). Warp extend adds 0.15\% (RA) and 0.29\% (LD): reusing a
+neighbor's model captures warped motion over a region at the cost of only an
+MV. Warp delta, which includes the WRL, warp-mv, and warp-new-mv, gives by far
+the most: 3.70\% (RA) and 4.69\% (LD). Together, the AV2 warp tools give more
+gain than any other group of tools in this paper, up to 11.41\% for class A4
+in LD. Their gain is larger in LD; a likely reason is that LD references are
+farther away in time, so zoom and rotation accumulate. The cost is mainly on
+the encoder side, mostly because of the parameter search in warp delta.
 
 \subsection{BRU}
 BRU targets a specific use case, so it was evaluated separately, on
@@ -1664,20 +1558,12 @@ which scales with the inactive area, is the main benefit.
 \label{sec:conclusion}
 %% =============================================================================
 
-This paper presented the inter coding tools of AV2. Compared with AV1, AV2
-redesigns the reference frame system; adds temporal interpolated prediction,
-decoder-side MV refinement, a much richer set of warp modes, parametric and
-implicit wedge masks, and weighted prediction; improves MV prediction with a
-simplified spatial search, trajectory-based and compressed temporal MV
-prediction, and a reference MV bank; and improves MV coding with a larger
-range, flexible precision, adaptive and joint MVDs, and shell-based MVD
-coding. For low-power applications, BRU lets a decoder update only the changed
-parts of a frame. Throughout, the design favors tools that let the decoder
-derive information rather than receive it, and keeps memory bandwidth and
-on-chip storage bounded for hardware decoders. The experiments show that the
-individual tools give gains from a few tenths of a percent up to several
-percent, and that together they are an important part of the roughly 30\%
-coding efficiency improvement of AV2 over AV1.
+This paper presented the inter coding tools of AV2, from the reference frame
+system and the new prediction tools to MV prediction, MV coding, and backward
+reference updating for low-power decoding. The tools are designed to keep
+memory bandwidth and on-chip storage bounded for hardware decoders. Together,
+they are an important part of the roughly 30\% coding efficiency improvement
+of AV2 over AV1.
 
 \section*{Acknowledgment}
 The authors thank all AOMedia members who contributed to the development of

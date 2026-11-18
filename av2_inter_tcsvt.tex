@@ -545,6 +545,7 @@ AV1~\cite{av2warp_companion,warp_beyond_av1}. We first review the warp model
 of AV1 and then describe the new AV2 tools.
 
 \subsubsection{Warp Model in AV1}
+% Should we place this part in the review of AV1?
 A warp model maps a pixel at $(x,y)$ in the current frame to a position
 $(x',y')$ in the reference frame:
 \begin{equation}
@@ -588,6 +589,7 @@ signal corrections, a mode that extends a neighbor's model, compound warp, and
 new prediction filters for large models.
 
 \subsubsection{Warp Reference List (WRL)}
+%This section should go under MV prediction
 \label{sec:wrl}
 Much like the DRL provides MV predictors, the WRL~\cite{cwgC061} provides candidate warp
 models, so that a block can pick a model with a short index instead of
@@ -659,7 +661,7 @@ current superblock row. It is reset at the start of every superblock row.
 Models from this buffer fill remaining WRL entries. This makes models from
 non-adjacent blocks available, which helps when the same camera motion covers
 a large area.
-
+% Shouldn't you call this warp mv bank instead of history buffer as this aligns with ref mv bank
 \emph{Step 4: global motion and default.} If the WRL is still not full, the
 global motion model of the reference frame is added, and any remaining
 entries are filled with the default (zero) model.
@@ -1164,7 +1166,10 @@ first four entries form the DRL; the candidate with the largest weight from
 Group~1 always takes the first slot. If fewer candidates are available, the
 list is shorter, which saves bits for the index. The encoder sends the index
 of the selected predictor.
-
+% ADHURAN
+% Is weighting base reorder applied when TMVP is selected to be at the highest priority?
+% Is it necessary to mention the adaptive search orders we have in DRL construction
+% I think last SMVP candidate (7) is searched after tmvp candidate when there is no reorder of DRL list. Do we need to have such information?
 For each block, AV2 signals whether the selected predictor is used as is or
 whether an MVD follows. For compound modes, this gives four cases depending on
 which of the two MVs has a non-zero MVD (for example \code{NEAR\_NEARMV},
